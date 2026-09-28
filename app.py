@@ -139,8 +139,10 @@ if uploaded_file is not None:
 
         if predicted_class == "Cat":
             st.success(f"🐱 Cat")
-        else:
+        elif predicted_class == "Dog":
             st.success(f"🐶 Dog")
+        else:
+            st.success("Invalid Image")
 
         st.metric(
             "Confidence",
