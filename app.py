@@ -199,4 +199,4 @@ if uploaded_file is not None:
 else:
 
     st.info("👆 Please upload a cat or dog image.")
-```
+
