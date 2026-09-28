@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 import tensorflow as tf
 import numpy as np
@@ -21,12 +22,10 @@ st.set_page_config(
 # --------------------------------------------------
 
 IMG_SIZE = 128
-CLASS_NAMES = {
-    0: "Cat",
-    1: "Dog"
-}
 
 MODEL_PATH = "cat_dog_cnn.keras"
+
+CONFIDENCE_THRESHOLD = 0.70
 
 
 # --------------------------------------------------
@@ -35,6 +34,7 @@ MODEL_PATH = "cat_dog_cnn.keras"
 
 @st.cache_resource
 def load_model():
+
     if not os.path.exists(MODEL_PATH):
         st.error(f"Model file not found: {MODEL_PATH}")
         st.stop()
@@ -51,19 +51,14 @@ model = load_model()
 
 def predict_image(image):
 
+    # Convert image to RGB
+    image = image.convert("RGB")
+
     # Resize image
     image = image.resize((IMG_SIZE, IMG_SIZE))
 
-    # Convert image to numpy array
+    # Convert image to NumPy array
     image_array = np.array(image)
-
-    # Handle grayscale images
-    if len(image_array.shape) == 2:
-        image_array = np.stack((image_array,) * 3, axis=-1)
-
-    # Handle RGBA images
-    if image_array.shape[-1] == 4:
-        image_array = image_array[:, :, :3]
 
     # Normalize pixel values
     image_array = image_array / 255.0
@@ -72,20 +67,34 @@ def predict_image(image):
     image_array = np.expand_dims(image_array, axis=0)
 
     # Prediction
-    prediction = model.predict(image_array, verbose=0)
+    prediction = model.predict(
+        image_array,
+        verbose=0
+    )
 
     probability = float(prediction[0][0])
 
-    # Sigmoid:
-    # probability >= 0.5 → Dog
-    # probability < 0.5  → Cat
-
+    # Determine class
     if probability >= 0.5:
+
         predicted_class = "Dog"
         confidence = probability
+
     else:
+
         predicted_class = "Cat"
         confidence = 1 - probability
+
+
+    # --------------------------------------------------
+    # Confidence Check
+    # --------------------------------------------------
+
+    if confidence < CONFIDENCE_THRESHOLD:
+
+        predicted_class = "No Cat or Dog"
+        confidence = confidence
+
 
     return predicted_class, confidence
 
@@ -97,7 +106,8 @@ def predict_image(image):
 st.title("🐱 🐶 Cat vs Dog Classifier")
 
 st.write(
-    "Upload an image and the CNN model will predict whether it is a **Cat** or **Dog**."
+    "Upload an image and the CNN model will predict "
+    "whether it is a **Cat** or **Dog**."
 )
 
 
@@ -112,7 +122,7 @@ uploaded_file = st.file_uploader(
 
 
 # --------------------------------------------------
-# Display & Predict
+# Display Image
 # --------------------------------------------------
 
 if uploaded_file is not None:
@@ -127,35 +137,67 @@ if uploaded_file is not None:
         width=400
     )
 
+
+    # --------------------------------------------------
+    # Prediction Button
+    # --------------------------------------------------
+
     if st.button("🔍 Predict"):
 
         with st.spinner("Analyzing image..."):
 
             predicted_class, confidence = predict_image(image)
 
+
         st.divider()
 
         st.subheader("Prediction")
 
-        if predicted_class == "Cat":
-            st.success(f"🐱 Cat")
-        elif predicted_class == "Dog":
-            st.success(f"🐶 Dog")
-        else:
-            st.success("There is No Cat or Dog Found")
 
-        st.metric(
-            "Confidence",
-            f"{confidence * 100:.2f}%"
-        )
+        # --------------------------------------------------
+        # Display Result
+        # --------------------------------------------------
+
+        if predicted_class == "Cat":
+
+            st.success("🐱 Cat detected")
+
+            st.metric(
+                "Confidence",
+                f"{confidence * 100:.2f}%"
+            )
+
+
+        elif predicted_class == "Dog":
+
+            st.success("🐶 Dog detected")
+
+            st.metric(
+                "Confidence",
+                f"{confidence * 100:.2f}%"
+            )
+
+
+        else:
+
+            st.warning(
+                "❌ No Cat or Dog detected with sufficient confidence."
+            )
+
+            st.metric(
+                "Model Confidence",
+                f"{confidence * 100:.2f}%"
+            )
+
+
+        # --------------------------------------------------
+        # Confidence Bar
+        # --------------------------------------------------
 
         st.progress(confidence)
 
-        st.write(
-            f"The model predicts **{predicted_class}** "
-            f"with **{confidence * 100:.2f}% confidence**."
-        )
 
 else:
 
     st.info("👆 Please upload a cat or dog image.")
+```
